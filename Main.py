@@ -204,7 +204,14 @@ def start_firewall():
                         proto = str(packet.protocol)
                         sport = getattr(packet, 'src_port', '')
                         dport = getattr(packet, 'dst_port', '')
-                        gui_queue.put(("log", f"Packet: {src}:{sport} -> {dst}:{dport} proto={proto}"))
+
+                        # Add all packets to dashboard
+                        gui_queue.put(("add_packet", (f"{src}:{sport}", f"{dst}:{dport}", proto)))
+
+                        # Update counter for all packets
+                        packet_count += 1
+                        if packet_count % 10 == 0:
+                            gui_queue.put(("update_counter", f"Packets: {packet_count}"))
 
                         # Manual block list should override trusted traffic bypass
                         if src in blocked_ips or dst in blocked_ips:
@@ -246,14 +253,6 @@ def start_firewall():
                         if selected != "ALL" and selected not in proto:
                             w.send(packet)
                             continue
-
-                        # Add to table (show ports)
-                        gui_queue.put(("add_packet", (f"{src}:{sport}", f"{dst}:{dport}", proto)))
-
-                        # Update counter every 10 packets
-                        packet_count += 1
-                        if packet_count % 10 == 0:
-                            gui_queue.put(("update_counter", f"Packets: {packet_count}"))
 
                         w.send(packet)
                     except Exception as e:
